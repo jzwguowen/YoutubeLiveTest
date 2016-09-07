@@ -10,6 +10,8 @@ namespace YoutubeLive
     {
         static void Main(string[] args)
         {
+            var api = new YoutubeApi();
+            Console.ReadLine();
         }
     }
 }
