@@ -3,6 +3,7 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
+using NReco.VideoConverter;
 using System;
 using System.IO;
 using System.Threading;
@@ -12,74 +13,68 @@ namespace YoutubeLive
     public class YoutubeApi
     {
         private YouTubeService service;
+
         public YoutubeApi()
         {
             service = Auth();
-            
-            /* privacy = "private"
-             *           "public"
-            */
-            var broadcast = ReturnBroadcast("prueba", "private");
 
-            /* encode = "rtmp"
-             *          "dash" 
-             * format = "240p" 
-             *          "1440p" 
-            */
-            var livestream = ReturnLivestream("live123", "rtmp", "240p", "", "");
+            var broadcastSnippet = new LiveBroadcastSnippet();
+            broadcastSnippet.Title = "Biometrico";
+            broadcastSnippet.ScheduledStartTime = DateTime.Now;
 
-            var bind = Bind(broadcast.Id, livestream.Id);
-        }
-
-        private LiveBroadcast ReturnBroadcast(string title, string privacy)
-        {
-            var snippet = new LiveBroadcastSnippet();
-            snippet.Title = title;
-            snippet.ScheduledStartTime = DateTime.Now;
-            //snippet.ScheduledEndTime = DateTime.Now.AddDays(1);
-
-            // Crear el template del evento del livestream
             var status = new LiveBroadcastStatus();
-            status.PrivacyStatus = privacy;
+            status.PrivacyStatus = "unlisted";
+
             var broadcast = new LiveBroadcast();
             broadcast.Kind = "youtube#liveBroadcast";
-            broadcast.Snippet = snippet;
+            broadcast.Snippet = broadcastSnippet;
             broadcast.Status = status;
 
-            var insert = new LiveBroadcastsResource.InsertRequest(service, broadcast, "snippet, status");
-            return insert.Execute();
-        }
+            var liveBroadcastInsert = service.LiveBroadcasts.Insert(broadcast, "snippet,status");
+            var returnedBroadcast = liveBroadcastInsert.Execute();
 
-        private LiveStream ReturnLivestream(string title, string encode, string format, string url, string backup)
-        {
-            // Configuracion del livestream
-            var snippet = new LiveStreamSnippet();
-            snippet.Title = title;
+            Console.WriteLine("\n================== Returned Broadcast ==================\n");
+            Console.WriteLine("  - Id: " + returnedBroadcast.Id);
+            Console.WriteLine("  - Title: " + returnedBroadcast.Snippet.Title);
+            Console.WriteLine("  - Description: " + returnedBroadcast.Snippet.Description);
+            Console.WriteLine("  - Published At: " + returnedBroadcast.Snippet.PublishedAt);
+            Console.WriteLine(
+                    "  - Scheduled Start Time: " + returnedBroadcast.Snippet.ScheduledStartTime);
+            Console.WriteLine(
+                    "  - Scheduled End Time: " + returnedBroadcast.Snippet.ScheduledEndTime);
 
-            var ingestion = new IngestionInfo();
-            //ingestion.StreamName = ""             // Nombre del stream
-            //ingestion.IngestionAddress = url;       // Url del stream
-            //ingestion.BackupIngestionAddress = backup; // Opcional
+            var streamSnippet = new LiveStreamSnippet();
+            streamSnippet.Title = "Camara de Establecimiento";
 
-            var settings = new CdnSettings();
-            settings.Format = format;
-            settings.IngestionType = encode; // rtmp o dash
-            settings.IngestionInfo = ingestion;
+            var cdnSettings = new CdnSettings();
+            cdnSettings.Format = "480p";
+            cdnSettings.IngestionType = "rtmp";
 
             var stream = new LiveStream();
             stream.Kind = "youtube#liveStream";
-            stream.Snippet = snippet;
-            stream.Cdn = settings;
+            stream.Snippet = streamSnippet;
+            stream.Cdn = cdnSettings;
 
-            var insert = new LiveStreamsResource.InsertRequest(service, stream, "snippet, cdn");
-            return insert.Execute();
-        }
+            var liveStreamInsert = service.LiveStreams.Insert(stream, "snippet,cdn");
+            var returnedStream = liveStreamInsert.Execute();
 
-        private LiveBroadcast Bind(string broadcastId, string livestreamId)
-        {
-            var bind = new LiveBroadcastsResource.BindRequest(service, broadcastId, "id, contentDetails");
-            bind.StreamId = livestreamId;
-            return bind.Execute();
+            Console.WriteLine("\n================== Returned Stream ==================\n");
+            Console.WriteLine("  - Id: " + returnedStream.Id);
+            Console.WriteLine("  - Title: " + returnedStream.Snippet.Title);
+            Console.WriteLine("  - Description: " + returnedStream.Snippet.Description);
+            Console.WriteLine("  - Published At: " + returnedStream.Snippet.PublishedAt);
+            Console.WriteLine("  - URL: " + returnedStream.Cdn.IngestionInfo.IngestionAddress);
+            Console.WriteLine("  - Name: " + returnedStream.Cdn.IngestionInfo.StreamName);
+
+            var liveBroadcastBind = service.LiveBroadcasts.Bind(returnedBroadcast.Id, "id, contentDetails");
+            liveBroadcastBind.StreamId = returnedStream.Id;
+            returnedBroadcast = liveBroadcastBind.Execute();
+
+            Console.WriteLine("\n================== Returned Bound Broadcast ==================\n");
+            Console.WriteLine("  - Broadcast Id: " + returnedBroadcast.Id);
+            Console.WriteLine("  - Bound Stream Id: " + returnedBroadcast.ContentDetails.BoundStreamId);
+
+            //rtsp://192.168.1.99/axis-media/media.amp
         }
 
         private YouTubeService Auth()
