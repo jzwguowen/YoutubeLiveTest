@@ -6,6 +6,7 @@ using Google.Apis.YouTube.v3.Data;
 using NReco.VideoConverter;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace YoutubeLive
@@ -22,15 +23,22 @@ namespace YoutubeLive
             broadcastSnippet.Title = "Biometrico";
             broadcastSnippet.ScheduledStartTime = DateTime.Now;
 
-            var status = new LiveBroadcastStatus();
-            status.PrivacyStatus = "unlisted";
+            var broadcastStatus = new LiveBroadcastStatus();
+            broadcastStatus.PrivacyStatus = "unlisted";
+
+            var broadcastMonitorStream = new MonitorStreamInfo();
+            broadcastMonitorStream.EnableMonitorStream = true;
+
+            var broadcastContentDetails = new LiveBroadcastContentDetails();
+            broadcastContentDetails.MonitorStream = broadcastMonitorStream;
 
             var broadcast = new LiveBroadcast();
             broadcast.Kind = "youtube#liveBroadcast";
             broadcast.Snippet = broadcastSnippet;
-            broadcast.Status = status;
+            broadcast.Status = broadcastStatus;
+            broadcast.ContentDetails = broadcastContentDetails;
 
-            var liveBroadcastInsert = service.LiveBroadcasts.Insert(broadcast, "snippet,status");
+            var liveBroadcastInsert = service.LiveBroadcasts.Insert(broadcast, "snippet,status,contentDetails");
             var returnedBroadcast = liveBroadcastInsert.Execute();
 
             Console.WriteLine("\n================== Returned Broadcast ==================\n");
@@ -47,7 +55,7 @@ namespace YoutubeLive
             streamSnippet.Title = "Camara de Establecimiento";
 
             var cdnSettings = new CdnSettings();
-            cdnSettings.Format = "480p";
+            cdnSettings.Format = "720p";
             cdnSettings.IngestionType = "rtmp";
 
             var stream = new LiveStream();
@@ -73,6 +81,45 @@ namespace YoutubeLive
             Console.WriteLine("\n================== Returned Bound Broadcast ==================\n");
             Console.WriteLine("  - Broadcast Id: " + returnedBroadcast.Id);
             Console.WriteLine("  - Bound Stream Id: " + returnedBroadcast.ContentDetails.BoundStreamId);
+
+            var liveStreamRequest = service.LiveStreams.List("id,status");
+            liveStreamRequest.Id = returnedStream.Id;
+
+            string streamLoop = "0";
+            while (!streamLoop.Contains("A"))
+            {
+                var returnedStreamListResponse = liveStreamRequest.Execute();
+                var foundStream = returnedStreamListResponse.Items.Single();
+                Console.WriteLine(foundStream.Status.StreamStatus);
+                streamLoop = Console.ReadKey().Key.ToString();
+            }
+
+            service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Testing, returnedBroadcast.Id, "");
+            var liveBroadcastRequest = service.LiveBroadcasts.List("id,status");
+            liveBroadcastRequest.Id = returnedBroadcast.Id;
+
+            string broadcastLoop = "0";
+            while (!broadcastLoop.Contains("A"))
+            {
+                
+                var returnedBroadcastListResponse = liveBroadcastRequest.Execute();
+                var foundBroadcast = returnedBroadcastListResponse.Items.Single();
+                Console.WriteLine(foundBroadcast.Status.LifeCycleStatus);
+                broadcastLoop = Console.ReadKey().ToString();
+            }
+
+            service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Live, returnedBroadcast.Id, "");
+
+            broadcastLoop = "0";
+            while (!broadcastLoop.Contains("A"))
+            {
+
+                var returnedBroadcastListResponse = liveBroadcastRequest.Execute();
+                var foundBroadcast = returnedBroadcastListResponse.Items.Single();
+                Console.WriteLine(foundBroadcast.Status.LifeCycleStatus);
+                broadcastLoop = Console.ReadKey().ToString();
+            }
+
 
             //rtsp://192.168.1.99/axis-media/media.amp
         }
