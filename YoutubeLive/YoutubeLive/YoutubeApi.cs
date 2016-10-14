@@ -3,7 +3,6 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
-using NReco.VideoConverter;
 using System;
 using System.IO;
 using System.Linq;
@@ -27,7 +26,7 @@ namespace YoutubeLive
             broadcastStatus.PrivacyStatus = "unlisted";
 
             var broadcastMonitorStream = new MonitorStreamInfo();
-            broadcastMonitorStream.EnableMonitorStream = true;
+            broadcastMonitorStream.EnableMonitorStream = false;
 
             var broadcastContentDetails = new LiveBroadcastContentDetails();
             broadcastContentDetails.MonitorStream = broadcastMonitorStream;
@@ -98,26 +97,26 @@ namespace YoutubeLive
             var liveBroadcastRequest = service.LiveBroadcasts.List("id,status");
             liveBroadcastRequest.Id = returnedBroadcast.Id;
 
-            string broadcastLoop = "0";
-            while (!broadcastLoop.Contains("A"))
+            char broadcastLoop = '0';
+            while (broadcastLoop != 'A')
             {
                 
                 var returnedBroadcastListResponse = liveBroadcastRequest.Execute();
                 var foundBroadcast = returnedBroadcastListResponse.Items.Single();
                 Console.WriteLine(foundBroadcast.Status.LifeCycleStatus);
-                broadcastLoop = Console.ReadKey().ToString();
+                broadcastLoop = Console.ReadKey().KeyChar;
             }
 
             service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Live, returnedBroadcast.Id, "");
 
-            broadcastLoop = "0";
-            while (!broadcastLoop.Contains("A"))
+            broadcastLoop = '0';
+            while (broadcastLoop != ('A'))
             {
 
                 var returnedBroadcastListResponse = liveBroadcastRequest.Execute();
                 var foundBroadcast = returnedBroadcastListResponse.Items.Single();
                 Console.WriteLine(foundBroadcast.Status.LifeCycleStatus);
-                broadcastLoop = Console.ReadKey().ToString();
+                broadcastLoop = Console.ReadKey().KeyChar;
             }
 
 
