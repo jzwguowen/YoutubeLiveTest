@@ -25,13 +25,17 @@ namespace YoutubeLive
             var broadcastStatus = new LiveBroadcastStatus();
             broadcastStatus.PrivacyStatus = "unlisted";
 
-            
+            var broadcastMonitorStream = new MonitorStreamInfo();
+            broadcastMonitorStream.EnableMonitorStream = true;
 
+            var broadcastContentDetails = new LiveBroadcastContentDetails();
+            broadcastContentDetails.MonitorStream = broadcastMonitorStream;
 
             var broadcast = new LiveBroadcast();
             broadcast.Kind = "youtube#liveBroadcast";
             broadcast.Snippet = broadcastSnippet;
             broadcast.Status = broadcastStatus;
+            broadcast.ContentDetails = broadcastContentDetails;
 
             var liveBroadcastInsert = service.LiveBroadcasts.Insert(broadcast, "snippet,status,contentDetails");
             var returnedBroadcast = liveBroadcastInsert.Execute();
@@ -143,14 +147,14 @@ namespace YoutubeLive
                     new[] { YouTubeService.Scope.Youtube },
                     "user",
                     CancellationToken.None,
-                    new FileDataStore("YoutubeTest")
+                    new FileDataStore(this.GetType().ToString())
                     ).Result;
             }
 
             var service = new YouTubeService(new BaseClientService.Initializer()
             {
                 HttpClientInitializer = creds,
-                ApplicationName = "YoutubeTest"
+                ApplicationName = this.GetType().ToString()
             });
 
             return service;
