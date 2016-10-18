@@ -25,17 +25,13 @@ namespace YoutubeLive
             var broadcastStatus = new LiveBroadcastStatus();
             broadcastStatus.PrivacyStatus = "unlisted";
 
-            var broadcastMonitorStream = new MonitorStreamInfo();
-            broadcastMonitorStream.EnableMonitorStream = false;
+            
 
-            var broadcastContentDetails = new LiveBroadcastContentDetails();
-            broadcastContentDetails.MonitorStream = broadcastMonitorStream;
 
             var broadcast = new LiveBroadcast();
             broadcast.Kind = "youtube#liveBroadcast";
             broadcast.Snippet = broadcastSnippet;
             broadcast.Status = broadcastStatus;
-            broadcast.ContentDetails = broadcastContentDetails;
 
             var liveBroadcastInsert = service.LiveBroadcasts.Insert(broadcast, "snippet,status,contentDetails");
             var returnedBroadcast = liveBroadcastInsert.Execute();
@@ -93,11 +89,25 @@ namespace YoutubeLive
                 streamLoop = Console.ReadKey().Key.ToString();
             }
 
-            service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Testing, returnedBroadcast.Id, "");
-            var liveBroadcastRequest = service.LiveBroadcasts.List("id,status");
+
+            returnedBroadcast.ContentDetails.MonitorStream.EnableMonitorStream = false;
+            service.LiveBroadcasts.Update(returnedBroadcast, "contentDetails");
+            var liveBroadcastRequest = service.LiveBroadcasts.List("id,status,contentDetails");
             liveBroadcastRequest.Id = returnedBroadcast.Id;
 
             char broadcastLoop = '0';
+            while (broadcastLoop != ('A'))
+            {
+
+                var returnedBroadcastListResponse = liveBroadcastRequest.Execute();
+                var foundBroadcast = returnedBroadcastListResponse.Items.Single();
+                Console.WriteLine(foundBroadcast.ContentDetails.MonitorStream.EnableMonitorStream);
+                broadcastLoop = Console.ReadKey().KeyChar;
+            }
+
+            service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Testing, returnedBroadcast.Id, "");
+
+            broadcastLoop = '0';
             while (broadcastLoop != 'A')
             {
                 
@@ -106,7 +116,7 @@ namespace YoutubeLive
                 Console.WriteLine(foundBroadcast.Status.LifeCycleStatus);
                 broadcastLoop = Console.ReadKey().KeyChar;
             }
-
+           
             service.LiveBroadcasts.Transition(LiveBroadcastsResource.TransitionRequest.BroadcastStatusEnum.Live, returnedBroadcast.Id, "");
 
             broadcastLoop = '0';
